@@ -6,6 +6,8 @@ import "github.com/fekuna/omnipos-user-service/internal/model"
 type Repository interface {
 	Create(token *model.RefreshToken) error
 	FindByToken(token string) (*model.RefreshToken, error)
+	RevokeToken(token string) error
+	RevokeAllByMerchantID(merchantID string) error
 	DeleteByMerchantID(merchantID string) error
 	DeleteExpiredTokens() error
 }

@@ -1,0 +1,3 @@
+version: v2
+deps:
+  - https://github.com/fekuna/omnipos-proto

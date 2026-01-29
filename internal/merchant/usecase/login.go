@@ -64,6 +64,7 @@ func (u *merchantUsecase) Login(phone, pin string) (string, string, error) {
 		},
 		MerchantID: merchant.ID,
 		Token:      refreshToken,
+		IsRevoked:  false,
 		ExpiresAt:  time.Now().Add(jwtHelper.GetRefreshTokenExpiry()),
 	}
 

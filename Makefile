@@ -19,3 +19,12 @@ migrate_up:
 
 migrate_down:
 	migrate -database postgres://omnipos:omnipos@localhost:5433/$(DB_NAME)?sslmode=disable -path migrations down 1
+
+# ==============================================================================
+# Proto
+
+proto:
+	buf generate
+
+proto-local:
+	buf generate --config buf.local.yaml

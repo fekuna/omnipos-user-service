@@ -17,6 +17,9 @@ var (
 // MerchantUsecase defines the business logic interface for merchant operations
 type MerchantUsecase interface {
 	Login(phone, pin string) (accessToken, refreshToken string, err error)
+	Logout(refreshToken string) error
+	LogoutAllDevices(merchantID string) error
+	RefreshAccessToken(refreshToken string) (accessToken string, err error)
 }
 
 // merchantUsecase implements MerchantUsecase interface

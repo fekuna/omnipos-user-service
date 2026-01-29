@@ -2,9 +2,13 @@ package main
 
 import (
 	"net"
+	"os"
+	"os/signal"
+	"syscall"
 
 	"github.com/fekuna/omnipos-pkg/database/postgres"
 	"github.com/fekuna/omnipos-pkg/logger"
+	userv1 "github.com/fekuna/omnipos-proto/proto/user/v1"
 	"github.com/fekuna/omnipos-user-service/config"
 	"github.com/fekuna/omnipos-user-service/internal/merchant/handler"
 	merchantRepo "github.com/fekuna/omnipos-user-service/internal/merchant/repository"
@@ -13,6 +17,7 @@ import (
 	"github.com/joho/godotenv"
 	"go.uber.org/zap"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/reflection"
 )
 
 func main() {
@@ -77,11 +82,8 @@ func main() {
 
 	// Create gRPC server
 	grpcServer := grpc.NewServer()
-
-	// Note: We'll register the service once proto is generated
-	// For now, we have the handler ready
-	// userv1.RegisterUserServiceServer(grpcServer, merchantHandler)
-	_ = merchantHandler // Prevent unused variable warning
+	userv1.RegisterMerchantServiceServer(grpcServer, merchantHandler)
+	reflection.Register(grpcServer)
 
 	log.Info("gRPC server configured")
 
@@ -91,6 +93,17 @@ func main() {
 	}
 
 	log.Info("Server started", zap.String("port", cfg.GRPC.Port))
+
+	// graceful shutdown
+	sigCh := make(chan os.Signal, 1)
+	signal.Notify(sigCh, syscall.SIGINT, syscall.SIGTERM)
+
+	go func() {
+		<-sigCh
+		log.Info("shutting down grpc server")
+		grpcServer.GracefulStop()
+	}()
+
 	if err := grpcServer.Serve(lis); err != nil {
 		log.Fatal("failed to serve", zap.Error(err))
 	}
