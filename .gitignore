@@ -1,0 +1,95 @@
+# Binaries for programs and plugins
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+bin/
+dist/
+
+# Test binary, built with `go test -c`
+*.test
+
+# Output of the go coverage tool
+*.out
+coverage.txt
+coverage.html
+
+# Go workspace file
+go.work
+go.work.sum
+
+# Dependency directories
+vendor/
+
+# Environment variables
+.env
+.env.local
+.env.*.local
+
+# IDEs and Editors
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# Air - live reload for Go apps (if you use it)
+tmp/
+.air.toml
+
+# Debug files
+__debug_bin
+debug
+
+# Build output
+/cmd/*/cmd
+/cmd/grpc/grpc
+/cmd/grpc/main
+
+# Generated protobuf files (uncomment when you add proto files)
+# *.pb.go
+# *_grpc.pb.go
+
+# Logs
+*.log
+logs/
+
+# Database files (if using local SQLite for testing)
+*.db
+*.sqlite
+*.sqlite3
+
+# Migration lock files (if using certain migration tools)
+.migrate.lock
+
+# MacOS
+.DS_Store
+.AppleDouble
+.LSOverride
+
+# Windows
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+
+# Linux
+.directory
+
+# Temporary files
+*.tmp
+*.temp
+*.bak
+*.backup
+
+# Compiled Object files
+*.o
+*.a
+*.so.0
+*.so.1
+
+# Editor backup files
+*~
+\#*\#
+.\#*
