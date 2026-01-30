@@ -1,6 +1,7 @@
 package repository
 
 import (
+	"context"
 	"database/sql"
 	"errors"
 	"strings"
@@ -18,7 +19,7 @@ func NewPGRepository(db *sqlx.DB) *PGRepository {
 	return &PGRepository{DB: db}
 }
 
-func (r *PGRepository) FindOneByAttributes(input *dto.FindOneByAttribute) (*model.Merchant, error) {
+func (r *PGRepository) FindOneByAttributes(ctx context.Context, input *dto.FindOneByAttribute) (*model.Merchant, error) {
 	var merchant model.Merchant
 
 	conditions := []string{}
@@ -59,7 +60,7 @@ func (r *PGRepository) FindOneByAttributes(input *dto.FindOneByAttribute) (*mode
 
 	namedQuery = r.DB.Rebind(namedQuery)
 
-	err = r.DB.Get(&merchant, namedQuery, namedArgs...)
+	err = r.DB.GetContext(ctx, &merchant, namedQuery, namedArgs...)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return nil, nil // not found

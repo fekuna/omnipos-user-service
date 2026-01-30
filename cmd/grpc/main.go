@@ -34,6 +34,7 @@ func main() {
 	}
 
 	log := logger.NewZapLogger(&loggerCfg)
+	defer log.Sync()
 
 	log.Info("Logger initialized")
 

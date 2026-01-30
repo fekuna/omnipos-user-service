@@ -6,6 +6,7 @@ import (
 
 	"github.com/fekuna/omnipos-pkg/logger"
 	userv1 "github.com/fekuna/omnipos-proto/proto/user/v1"
+	"github.com/fekuna/omnipos-user-service/internal/merchant"
 	"github.com/fekuna/omnipos-user-service/internal/merchant/usecase"
 	"go.uber.org/zap"
 	"google.golang.org/grpc/codes"
@@ -15,12 +16,12 @@ import (
 type MerchantHandler struct {
 	userv1.UnimplementedMerchantServiceServer
 
-	merchantUsecase usecase.MerchantUsecase
+	merchantUsecase merchant.MerchantUsecase
 	logger          logger.ZapLogger
 }
 
 // NewMerchantHandler creates a new merchant gRPC handler
-func NewMerchantHandler(merchantUsecase usecase.MerchantUsecase, log logger.ZapLogger) *MerchantHandler {
+func NewMerchantHandler(merchantUsecase merchant.MerchantUsecase, log logger.ZapLogger) *MerchantHandler {
 	return &MerchantHandler{
 		merchantUsecase: merchantUsecase,
 		logger:          log,
@@ -41,7 +42,7 @@ func (h *MerchantHandler) LoginMerchant(ctx context.Context, req *userv1.LoginMe
 	h.logger.Info("processing login request", zap.String("phone", req.Phone))
 
 	// Call use case
-	accessToken, refreshToken, err := h.merchantUsecase.Login(req.Phone, req.Pin)
+	accessToken, refreshToken, err := h.merchantUsecase.Login(ctx, req.Phone, req.Pin)
 	if err != nil {
 		h.logger.Error("login failed", zap.Error(err))
 
@@ -85,7 +86,7 @@ func (h *MerchantHandler) LogoutMerchant(ctx context.Context, req interface{}) (
 	h.logger.Info("processing logout request")
 
 	// Call use case
-	err := h.merchantUsecase.Logout(logoutReq.RefreshToken)
+	err := h.merchantUsecase.Logout(ctx, logoutReq.RefreshToken)
 	if err != nil {
 		h.logger.Error("logout failed", zap.Error(err))
 		return nil, status.Error(codes.Internal, "failed to logout")
@@ -120,7 +121,7 @@ func (h *MerchantHandler) LogoutAllDevices(ctx context.Context, req interface{})
 	h.logger.Info("processing logout all devices request", zap.String("merchant_id", logoutAllReq.MerchantID))
 
 	// Call use case
-	err := h.merchantUsecase.LogoutAllDevices(logoutAllReq.MerchantID)
+	err := h.merchantUsecase.LogoutAllDevices(ctx, logoutAllReq.MerchantID)
 	if err != nil {
 		h.logger.Error("logout all devices failed", zap.Error(err))
 		return nil, status.Error(codes.Internal, "failed to logout from all devices")
@@ -154,7 +155,7 @@ func (h *MerchantHandler) RefreshToken(ctx context.Context, req interface{}) (in
 	h.logger.Info("processing refresh token request")
 
 	// Call use case
-	accessToken, err := h.merchantUsecase.RefreshAccessToken(refreshReq.RefreshToken)
+	accessToken, err := h.merchantUsecase.RefreshAccessToken(ctx, refreshReq.RefreshToken)
 	if err != nil {
 		h.logger.Error("token refresh failed", zap.Error(err))
 

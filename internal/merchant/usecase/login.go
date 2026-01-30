@@ -1,6 +1,7 @@
 package usecase
 
 import (
+	"context"
 	"time"
 
 	"github.com/fekuna/omnipos-user-service/internal/helper"
@@ -11,11 +12,11 @@ import (
 )
 
 // Login authenticates a merchant and returns access and refresh tokens
-func (u *merchantUsecase) Login(phone, pin string) (string, string, error) {
+func (u *merchantUsecase) Login(ctx context.Context, phone, pin string) (string, string, error) {
 	u.logger.Info("attempting merchant login", zap.String("phone", phone))
 
 	// Find merchant by phone
-	merchant, err := u.merchantRepo.FindOneByAttributes(&dto.FindOneByAttribute{
+	merchant, err := u.merchantRepo.FindOneByAttributes(ctx, &dto.FindOneByAttribute{
 		Phone: phone,
 	})
 	if err != nil {
@@ -68,7 +69,7 @@ func (u *merchantUsecase) Login(phone, pin string) (string, string, error) {
 		ExpiresAt:  time.Now().Add(jwtHelper.GetRefreshTokenExpiry()),
 	}
 
-	err = u.refreshTokenRepo.Create(refreshTokenModel)
+	err = u.refreshTokenRepo.Create(ctx, refreshTokenModel)
 	if err != nil {
 		u.logger.Error("failed to store refresh token", zap.Error(err))
 		return "", "", err

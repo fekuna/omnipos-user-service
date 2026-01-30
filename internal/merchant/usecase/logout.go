@@ -1,16 +1,18 @@
 package usecase
 
 import (
+	"context"
+
 	"github.com/fekuna/omnipos-user-service/internal/helper"
 	"go.uber.org/zap"
 )
 
 // Logout revokes a specific refresh token (single device logout)
-func (u *merchantUsecase) Logout(refreshToken string) error {
+func (u *merchantUsecase) Logout(ctx context.Context, refreshToken string) error {
 	u.logger.Info("merchant logout - revoking token")
 
 	// Revoke the specific refresh token
-	err := u.refreshTokenRepo.RevokeToken(refreshToken)
+	err := u.refreshTokenRepo.RevokeToken(ctx, refreshToken)
 	if err != nil {
 		u.logger.Error("failed to revoke refresh token", zap.Error(err))
 		return err
@@ -21,11 +23,11 @@ func (u *merchantUsecase) Logout(refreshToken string) error {
 }
 
 // LogoutAllDevices revokes all refresh tokens for a merchant (all devices logout)
-func (u *merchantUsecase) LogoutAllDevices(merchantID string) error {
+func (u *merchantUsecase) LogoutAllDevices(ctx context.Context, merchantID string) error {
 	u.logger.Info("merchant logout all devices", zap.String("merchant_id", merchantID))
 
 	// Revoke all refresh tokens for this merchant
-	err := u.refreshTokenRepo.RevokeAllByMerchantID(merchantID)
+	err := u.refreshTokenRepo.RevokeAllByMerchantID(ctx, merchantID)
 	if err != nil {
 		u.logger.Error("failed to revoke all tokens", zap.Error(err))
 		return err
@@ -36,11 +38,11 @@ func (u *merchantUsecase) LogoutAllDevices(merchantID string) error {
 }
 
 // RefreshAccessToken generates a new access token using a valid refresh token
-func (u *merchantUsecase) RefreshAccessToken(refreshToken string) (string, error) {
+func (u *merchantUsecase) RefreshAccessToken(ctx context.Context, refreshToken string) (string, error) {
 	u.logger.Info("attempting to refresh access token")
 
 	// Find the refresh token in database
-	token, err := u.refreshTokenRepo.FindByToken(refreshToken)
+	token, err := u.refreshTokenRepo.FindByToken(ctx, refreshToken)
 	if err != nil {
 		u.logger.Error("failed to find refresh token", zap.Error(err))
 		return "", err

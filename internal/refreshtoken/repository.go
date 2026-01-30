@@ -1,13 +1,17 @@
 package refreshtoken
 
-import "github.com/fekuna/omnipos-user-service/internal/model"
+import (
+	"context"
+
+	"github.com/fekuna/omnipos-user-service/internal/model"
+)
 
 // Repository defines the interface for refresh token operations
 type Repository interface {
-	Create(token *model.RefreshToken) error
-	FindByToken(token string) (*model.RefreshToken, error)
-	RevokeToken(token string) error
-	RevokeAllByMerchantID(merchantID string) error
-	DeleteByMerchantID(merchantID string) error
-	DeleteExpiredTokens() error
+	Create(ctx context.Context, token *model.RefreshToken) error
+	FindByToken(ctx context.Context, token string) (*model.RefreshToken, error)
+	RevokeToken(ctx context.Context, token string) error
+	RevokeAllByMerchantID(ctx context.Context, merchantID string) error
+	DeleteByMerchantID(ctx context.Context, merchantID string) error
+	DeleteExpiredTokens(ctx context.Context) error
 }

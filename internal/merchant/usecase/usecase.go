@@ -14,15 +14,7 @@ var (
 	ErrInvalidCredentials = errors.New("invalid phone or PIN")
 )
 
-// MerchantUsecase defines the business logic interface for merchant operations
-type MerchantUsecase interface {
-	Login(phone, pin string) (accessToken, refreshToken string, err error)
-	Logout(refreshToken string) error
-	LogoutAllDevices(merchantID string) error
-	RefreshAccessToken(refreshToken string) (accessToken string, err error)
-}
-
-// merchantUsecase implements MerchantUsecase interface
+// merchantUsecase implements merchant.MerchantUsecase interface
 type merchantUsecase struct {
 	merchantRepo       merchant.PGRepository
 	refreshTokenRepo   refreshtoken.Repository
@@ -40,7 +32,7 @@ func NewMerchantUsecase(
 	jwtSecretKey string,
 	accessTokenExpiry time.Duration,
 	refreshTokenExpiry time.Duration,
-) MerchantUsecase {
+) merchant.MerchantUsecase {
 	return &merchantUsecase{
 		merchantRepo:       merchantRepo,
 		refreshTokenRepo:   refreshTokenRepo,
