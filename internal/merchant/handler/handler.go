@@ -6,11 +6,14 @@ import (
 
 	"github.com/fekuna/omnipos-pkg/logger"
 	userv1 "github.com/fekuna/omnipos-proto/proto/user/v1"
+	"github.com/fekuna/omnipos-user-service/internal/auth"
 	"github.com/fekuna/omnipos-user-service/internal/merchant"
 	"github.com/fekuna/omnipos-user-service/internal/merchant/usecase"
 	"go.uber.org/zap"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
+	"google.golang.org/protobuf/types/known/emptypb"
+	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
 type MerchantHandler struct {
@@ -29,16 +32,6 @@ func NewMerchantHandler(merchantUsecase merchant.MerchantUsecase, log logger.Zap
 }
 
 func (h *MerchantHandler) LoginMerchant(ctx context.Context, req *userv1.LoginMerchantRequest) (*userv1.LoginMerchantResponse, error) {
-	type LoginRequest struct {
-		Phone string
-		Pin   string
-	}
-
-	type LoginResponse struct {
-		AccessToken  string
-		RefreshToken string
-	}
-
 	h.logger.Info("processing login request", zap.String("phone", req.Phone))
 
 	// Call use case
@@ -171,5 +164,39 @@ func (h *MerchantHandler) RefreshToken(ctx context.Context, req interface{}) (in
 
 	return &RefreshTokenResponse{
 		AccessToken: accessToken,
+	}, nil
+}
+
+// GetCurrentMerchant handles the current merchant retrieval request
+// The merchant is identified by the JWT token (via context)
+func (h *MerchantHandler) GetCurrentMerchant(ctx context.Context, req *emptypb.Empty) (*userv1.GetCurrentMerchantResponse, error) {
+	// Extract user context from context (added by auth interceptor)
+	userCtx := auth.MustGetUserContext(ctx)
+
+	h.logger.Info("processing get current merchant request", zap.String("merchant_id", userCtx.MerchantID))
+
+	// Call use case to get merchant details using ID from token
+	merchant, err := h.merchantUsecase.GetMerchantDetail(ctx, userCtx.MerchantID)
+	if err != nil {
+		h.logger.Error("failed to get merchant detail", zap.Error(err))
+
+		// Map errors to gRPC status codes
+		if errors.Is(err, usecase.ErrMerchantNotFound) {
+			return nil, status.Error(codes.NotFound, "merchant not found")
+		}
+
+		return nil, status.Error(codes.Internal, "internal server error")
+	}
+
+	h.logger.Info("merchant detail retrieved successfully", zap.String("merchant_id", userCtx.MerchantID))
+
+	// Map domain model to proto response
+	return &userv1.GetCurrentMerchantResponse{
+		Id:        merchant.ID,
+		Name:      merchant.Name,
+		Phone:     merchant.Phone,
+		Timezone:  merchant.Timezone,
+		CreatedAt: timestamppb.New(merchant.CreatedAt),
+		UpdatedAt: timestamppb.New(merchant.UpdatedAt),
 	}, nil
 }

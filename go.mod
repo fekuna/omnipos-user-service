@@ -4,9 +4,9 @@ go 1.24.0
 
 toolchain go1.24.12
 
-replace github.com/fekuna/omnipos-pkg => /home/fekuna/public_projects/omnipos/omnipos-pkg
+replace github.com/fekuna/omnipos-pkg => ../omnipos-pkg
 
-replace github.com/fekuna/omnipos-proto => /home/fekuna/public_projects/omnipos/omnipos-proto
+replace github.com/fekuna/omnipos-proto => ../omnipos-proto
 
 require (
 	github.com/fekuna/omnipos-pkg v0.0.0-00010101000000-000000000000
@@ -18,6 +18,7 @@ require (
 	go.uber.org/zap v1.27.1
 	golang.org/x/crypto v0.47.0
 	google.golang.org/grpc v1.78.0
+	google.golang.org/protobuf v1.36.11
 )
 
 require (
@@ -31,5 +32,4 @@ require (
 	golang.org/x/text v0.33.0 // indirect
 	google.golang.org/genproto/googleapis/api v0.0.0-20260128011058-8636f8732409 // indirect
 	google.golang.org/genproto/googleapis/rpc v0.0.0-20260128011058-8636f8732409 // indirect
-	google.golang.org/protobuf v1.36.11 // indirect
 )

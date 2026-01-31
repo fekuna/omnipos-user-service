@@ -37,7 +37,6 @@ vendor/
 
 # Air - live reload for Go apps (if you use it)
 tmp/
-.air.toml
 
 # Debug files
 __debug_bin

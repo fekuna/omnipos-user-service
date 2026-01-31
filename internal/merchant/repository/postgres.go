@@ -70,3 +70,25 @@ func (r *PGRepository) FindOneByAttributes(ctx context.Context, input *dto.FindO
 
 	return &merchant, nil
 }
+
+// FindByID finds a merchant by their ID
+func (r *PGRepository) FindByID(ctx context.Context, id string) (*model.Merchant, error) {
+	var merchant model.Merchant
+
+	query := `
+		SELECT id, name, phone, pin, timezone, created_at, updated_at
+		FROM merchants
+		WHERE id = $1
+		LIMIT 1
+	`
+
+	err := r.DB.GetContext(ctx, &merchant, query, id)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return nil, nil // not found
+		}
+		return nil, err
+	}
+
+	return &merchant, nil
+}

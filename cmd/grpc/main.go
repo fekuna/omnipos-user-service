@@ -13,6 +13,7 @@ import (
 	"github.com/fekuna/omnipos-user-service/internal/merchant/handler"
 	merchantRepo "github.com/fekuna/omnipos-user-service/internal/merchant/repository"
 	"github.com/fekuna/omnipos-user-service/internal/merchant/usecase"
+	"github.com/fekuna/omnipos-user-service/internal/middleware"
 	refreshTokenRepo "github.com/fekuna/omnipos-user-service/internal/refreshtoken/repository"
 	"github.com/joho/godotenv"
 	"go.uber.org/zap"
@@ -81,12 +82,18 @@ func main() {
 
 	log.Info("Handlers initialized")
 
-	// Create gRPC server
-	grpcServer := grpc.NewServer()
+	// Initialize auth context interceptor
+	authContextInterceptor := middleware.NewAuthContextInterceptor(log)
+	log.Info("Auth context interceptor initialized")
+
+	// Create gRPC server with interceptor
+	grpcServer := grpc.NewServer(
+		grpc.UnaryInterceptor(authContextInterceptor.Unary()),
+	)
 	userv1.RegisterMerchantServiceServer(grpcServer, merchantHandler)
 	reflection.Register(grpcServer)
 
-	log.Info("gRPC server configured")
+	log.Info("gRPC server configured with auth context interceptor")
 
 	lis, err := net.Listen("tcp", cfg.GRPC.Port)
 	if err != nil {
