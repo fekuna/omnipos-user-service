@@ -2,8 +2,11 @@ package usecase
 
 import (
 	"context"
+	"time"
 
 	"github.com/fekuna/omnipos-user-service/internal/helper"
+	"github.com/fekuna/omnipos-user-service/internal/model"
+	"github.com/google/uuid"
 	"go.uber.org/zap"
 )
 
@@ -38,35 +41,70 @@ func (u *merchantUsecase) LogoutAllDevices(ctx context.Context, merchantID strin
 }
 
 // RefreshAccessToken generates a new access token using a valid refresh token
-func (u *merchantUsecase) RefreshAccessToken(ctx context.Context, refreshToken string) (string, error) {
+func (u *merchantUsecase) RefreshAccessToken(ctx context.Context, refreshToken string) (string, string, error) {
 	u.logger.Info("attempting to refresh access token")
 
 	// Find the refresh token in database
 	token, err := u.refreshTokenRepo.FindByToken(ctx, refreshToken)
 	if err != nil {
 		u.logger.Error("failed to find refresh token", zap.Error(err))
-		return "", err
+		return "", "", err
 	}
 
 	if token == nil {
 		u.logger.Warn("refresh token not found, expired, or revoked")
-		return "", ErrInvalidCredentials
+		return "", "", ErrInvalidCredentials
 	}
 
 	// If we reach here, token is valid and not revoked (checked in repository)
-	// Generate new access token
+
+	// 1. Revoke the OLD refresh token (Rotation)
+	// We do this BEFORE generating the new one to ensure single-use
+	if err := u.refreshTokenRepo.RevokeToken(ctx, refreshToken); err != nil {
+		u.logger.Error("failed to revoke old refresh token during rotation", zap.Error(err))
+		// Should we fail? Yes, security first.
+		return "", "", err
+	}
+
+	// 2. Generate NEW Access Token
 	jwtHelper := helper.NewJWTHelper(
 		u.jwtSecretKey,
 		u.accessTokenExpiry,
 		u.refreshTokenExpiry,
 	)
 
-	accessToken, err := jwtHelper.GenerateAccessToken(token.MerchantID)
+	newAccessToken, err := jwtHelper.GenerateAccessToken(token.MerchantID)
 	if err != nil {
 		u.logger.Error("failed to generate new access token", zap.Error(err))
-		return "", err
+		return "", "", err
 	}
 
-	u.logger.Info("access token refreshed successfully", zap.String("merchant_id", token.MerchantID))
-	return accessToken, nil
+	// 3. Generate NEW Refresh Token (String)
+	newRefreshTokenString, err := jwtHelper.GenerateRefreshToken(token.MerchantID)
+	if err != nil {
+		u.logger.Error("failed to generate new refresh token string", zap.Error(err))
+		return "", "", err
+	}
+
+	// 4. Save NEW Refresh Token to Database
+	now := time.Now()
+	newRefreshToken := &model.RefreshToken{
+		BaseModel: model.BaseModel{
+			ID:        uuid.New().String(),
+			CreatedAt: now,
+			UpdatedAt: now,
+		},
+		MerchantID: token.MerchantID,
+		Token:      newRefreshTokenString,
+		IsRevoked:  false,
+		ExpiresAt:  now.Add(u.refreshTokenExpiry),
+	}
+
+	if err := u.refreshTokenRepo.Create(ctx, newRefreshToken); err != nil {
+		u.logger.Error("failed to save new refresh token", zap.Error(err))
+		return "", "", err
+	}
+
+	u.logger.Info("tokens rotated (refresh) successfully", zap.String("merchant_id", token.MerchantID))
+	return newAccessToken, newRefreshTokenString, nil
 }

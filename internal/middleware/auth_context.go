@@ -33,6 +33,7 @@ func (i *AuthContextInterceptor) isPublicEndpoint(method string) bool {
 		"Register",
 		"ForgotPassword",
 		"ResetPassword",
+		"RefreshToken",
 	}
 
 	for _, pattern := range publicPatterns {

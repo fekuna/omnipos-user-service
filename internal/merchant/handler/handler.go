@@ -9,6 +9,7 @@ import (
 	"github.com/fekuna/omnipos-user-service/internal/auth"
 	"github.com/fekuna/omnipos-user-service/internal/merchant"
 	"github.com/fekuna/omnipos-user-service/internal/merchant/usecase"
+	useruc "github.com/fekuna/omnipos-user-service/internal/user/usecase"
 	"go.uber.org/zap"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -20,13 +21,15 @@ type MerchantHandler struct {
 	userv1.UnimplementedMerchantServiceServer
 
 	merchantUsecase merchant.MerchantUsecase
+	userUsecase     useruc.Usecase
 	logger          logger.ZapLogger
 }
 
 // NewMerchantHandler creates a new merchant gRPC handler
-func NewMerchantHandler(merchantUsecase merchant.MerchantUsecase, log logger.ZapLogger) *MerchantHandler {
+func NewMerchantHandler(merchantUsecase merchant.MerchantUsecase, userUsecase useruc.Usecase, log logger.ZapLogger) *MerchantHandler {
 	return &MerchantHandler{
 		merchantUsecase: merchantUsecase,
+		userUsecase:     userUsecase,
 		logger:          log,
 	}
 }
@@ -50,11 +53,55 @@ func (h *MerchantHandler) LoginMerchant(ctx context.Context, req *userv1.LoginMe
 		return nil, status.Error(codes.Internal, "internal server error")
 	}
 
+	// Check if user management is enabled
+	// Since we don't have the merchant object here (Login returns tokens only),
+	// we technically should modify Usecase.Login to return Merchant object OR fetch it here.
+	// But h.merchantUsecase.Login takes phone/pin and return tokens.
+	// To fit the "Instant Accuracy" plan, we need the Merchant object to check FeatureFlags.
+
+	// Let's fetch the merchant by phone to get features.
+	// Note: Login already validates credentials, so fetching by phone is safe here IF login succeeds.
+	merchantObj, err := h.merchantUsecase.GetMerchantByPhone(ctx, req.Phone)
+	var availableUsers []*userv1.UserInfo
+	var userManagementEnabled bool
+
+	if err == nil {
+		userManagementEnabled = merchantObj.FeatureFlags.UserManagement
+
+		if userManagementEnabled {
+			// Fetch users
+			// We iterate pages or just fetch first page? Ideally fetch all active users (lite version).
+			// userUsecase.ListUsers requires pagination. Let's ask for 100 users for now.
+			listResp, err := h.userUsecase.ListUsers(ctx, merchantObj.ID, &userv1.ListUsersRequest{
+				Page:     1,
+				PageSize: 100, // Reasonable limit for login screen
+			})
+			if err == nil {
+				for _, u := range listResp.Users {
+					if u.Status == "active" {
+						availableUsers = append(availableUsers, &userv1.UserInfo{
+							Id:       u.Id,
+							Username: u.Username,
+							FullName: u.FullName,
+							RoleName: u.Role.Name, // Assuming Role is populated in User
+						})
+					}
+				}
+			} else {
+				h.logger.Error("failed to list users for merchant login", zap.Error(err))
+			}
+		}
+	} else {
+		h.logger.Error("failed to fetch merchant details after login", zap.Error(err))
+	}
+
 	h.logger.Info("login successful", zap.String("phone", req.Phone))
 
 	return &userv1.LoginMerchantResponse{
-		AccessToken:  accessToken,
-		RefreshToken: refreshToken,
+		AccessToken:           accessToken,
+		RefreshToken:          refreshToken,
+		UserManagementEnabled: userManagementEnabled,
+		AvailableUsers:        availableUsers,
 	}, nil
 }
 
@@ -129,26 +176,11 @@ func (h *MerchantHandler) LogoutAllDevices(ctx context.Context, req interface{})
 }
 
 // RefreshToken handles refresh token rotation to get a new access token
-// Note: This signature will be updated once proto is generated
-func (h *MerchantHandler) RefreshToken(ctx context.Context, req interface{}) (interface{}, error) {
-	type RefreshTokenRequest struct {
-		RefreshToken string
-	}
-
-	type RefreshTokenResponse struct {
-		AccessToken string
-	}
-
-	refreshReq, ok := req.(*RefreshTokenRequest)
-	if !ok {
-		h.logger.Error("invalid request type")
-		return nil, status.Error(codes.InvalidArgument, "invalid request")
-	}
-
+func (h *MerchantHandler) RefreshToken(ctx context.Context, req *userv1.RefreshTokenRequest) (*userv1.RefreshTokenResponse, error) {
 	h.logger.Info("processing refresh token request")
 
 	// Call use case
-	accessToken, err := h.merchantUsecase.RefreshAccessToken(ctx, refreshReq.RefreshToken)
+	accessToken, refreshToken, err := h.merchantUsecase.RefreshAccessToken(ctx, req.RefreshToken)
 	if err != nil {
 		h.logger.Error("token refresh failed", zap.Error(err))
 
@@ -162,8 +194,9 @@ func (h *MerchantHandler) RefreshToken(ctx context.Context, req interface{}) (in
 
 	h.logger.Info("token refresh successful")
 
-	return &RefreshTokenResponse{
-		AccessToken: accessToken,
+	return &userv1.RefreshTokenResponse{
+		AccessToken:  accessToken,
+		RefreshToken: refreshToken,
 	}, nil
 }
 
@@ -192,11 +225,12 @@ func (h *MerchantHandler) GetCurrentMerchant(ctx context.Context, req *emptypb.E
 
 	// Map domain model to proto response
 	return &userv1.GetCurrentMerchantResponse{
-		Id:        merchant.ID,
-		Name:      merchant.Name,
-		Phone:     merchant.Phone,
-		Timezone:  merchant.Timezone,
-		CreatedAt: timestamppb.New(merchant.CreatedAt),
-		UpdatedAt: timestamppb.New(merchant.UpdatedAt),
+		Id:                    merchant.ID,
+		Name:                  merchant.Name,
+		Phone:                 merchant.Phone,
+		Timezone:              merchant.Timezone,
+		CreatedAt:             timestamppb.New(merchant.CreatedAt),
+		UpdatedAt:             timestamppb.New(merchant.UpdatedAt),
+		UserManagementEnabled: merchant.FeatureFlags.UserManagement,
 	}, nil
 }

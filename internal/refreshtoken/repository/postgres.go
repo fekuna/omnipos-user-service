@@ -45,7 +45,7 @@ func (r *PGRepository) FindByToken(ctx context.Context, tokenString string) (*mo
 	var token model.RefreshToken
 
 	query := `
-		SELECT id, merchant_id, token, is_revoked, expires_at, created_at, updated_at
+		SELECT id, merchant_id, token, is_revoked, expires_at, created_at
 		FROM refresh_tokens
 		WHERE token = $1 AND expires_at > NOW() AND is_revoked = FALSE
 		LIMIT 1

@@ -49,3 +49,13 @@ func GetMerchantID(ctx context.Context) string {
 	}
 	return userCtx.MerchantID
 }
+
+// GetUserID is a convenience method to get user ID from context
+// Returns empty string if context is not found
+func GetUserID(ctx context.Context) string {
+	userCtx := GetUserContext(ctx)
+	if userCtx == nil {
+		return ""
+	}
+	return userCtx.UserID
+}

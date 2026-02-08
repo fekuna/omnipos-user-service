@@ -1,6 +1,10 @@
 package config
 
-import "time"
+import (
+	"os"
+	"strings"
+	"time"
+)
 
 type Config struct {
 	Server   ServerConfig
@@ -8,6 +12,7 @@ type Config struct {
 	Postgres PostgresConfig
 	Logger   LoggerConfig
 	JWT      JWTConfig
+	Kafka    KafkaConfig
 }
 
 type ServerConfig struct {
@@ -46,6 +51,10 @@ type JWTConfig struct {
 	RefreshTokenExpiry time.Duration
 }
 
+type KafkaConfig struct {
+	Brokers []string
+}
+
 func LoadEnv() *Config {
 	return &Config{
 		Server: ServerConfig{
@@ -79,5 +88,16 @@ func LoadEnv() *Config {
 			AccessTokenExpiry:  getEnvDuration("JWT_ACCESS_TOKEN_EXPIRY", 15*time.Minute),
 			RefreshTokenExpiry: getEnvDuration("JWT_REFRESH_TOKEN_EXPIRY", 168*time.Hour),
 		},
+		Kafka: KafkaConfig{
+			Brokers: getKafkaBrokers(),
+		},
 	}
+}
+
+func getKafkaBrokers() []string {
+	brokers := os.Getenv("KAFKA_BROKERS")
+	if brokers == "" {
+		return []string{}
+	}
+	return strings.Split(brokers, ",")
 }

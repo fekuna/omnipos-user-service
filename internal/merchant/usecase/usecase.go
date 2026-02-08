@@ -1,11 +1,14 @@
 package usecase
 
 import (
+	"context"
 	"errors"
 	"time"
 
 	"github.com/fekuna/omnipos-pkg/logger"
 	"github.com/fekuna/omnipos-user-service/internal/merchant"
+	"github.com/fekuna/omnipos-user-service/internal/merchant/dto"
+	"github.com/fekuna/omnipos-user-service/internal/model"
 	"github.com/fekuna/omnipos-user-service/internal/refreshtoken"
 )
 
@@ -41,4 +44,17 @@ func NewMerchantUsecase(
 		accessTokenExpiry:  accessTokenExpiry,
 		refreshTokenExpiry: refreshTokenExpiry,
 	}
+}
+
+func (uc *merchantUsecase) GetMerchantByPhone(ctx context.Context, phone string) (*model.Merchant, error) {
+	merchant, err := uc.merchantRepo.FindOneByAttributes(ctx, &dto.FindOneByAttribute{
+		Phone: phone,
+	})
+	if err != nil {
+		return nil, err
+	}
+	if merchant == nil {
+		return nil, ErrMerchantNotFound
+	}
+	return merchant, nil
 }

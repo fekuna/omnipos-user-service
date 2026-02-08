@@ -43,7 +43,7 @@ func (r *PGRepository) FindOneByAttributes(ctx context.Context, input *dto.FindO
 	}
 
 	query := `
-		SELECT id, name, phone, pin, timezone, created_at, updated_at
+		SELECT id, name, phone, pin, timezone, feature_flags, created_at, updated_at
 		FROM merchants
 	`
 
@@ -76,7 +76,7 @@ func (r *PGRepository) FindByID(ctx context.Context, id string) (*model.Merchant
 	var merchant model.Merchant
 
 	query := `
-		SELECT id, name, phone, pin, timezone, created_at, updated_at
+		SELECT id, name, phone, pin, timezone, feature_flags, created_at, updated_at
 		FROM merchants
 		WHERE id = $1
 		LIMIT 1

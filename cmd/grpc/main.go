@@ -6,6 +6,7 @@ import (
 	"os/signal"
 	"syscall"
 
+	"github.com/fekuna/omnipos-pkg/audit"
 	"github.com/fekuna/omnipos-pkg/database/postgres"
 	"github.com/fekuna/omnipos-pkg/logger"
 	userv1 "github.com/fekuna/omnipos-proto/proto/user/v1"
@@ -15,6 +16,12 @@ import (
 	"github.com/fekuna/omnipos-user-service/internal/merchant/usecase"
 	"github.com/fekuna/omnipos-user-service/internal/middleware"
 	refreshTokenRepo "github.com/fekuna/omnipos-user-service/internal/refreshtoken/repository"
+	roleHandler "github.com/fekuna/omnipos-user-service/internal/role/handler"
+	roleRepo "github.com/fekuna/omnipos-user-service/internal/role/repository"
+	roleUC "github.com/fekuna/omnipos-user-service/internal/role/usecase"
+	userHandler "github.com/fekuna/omnipos-user-service/internal/user/handler"
+	userRepo "github.com/fekuna/omnipos-user-service/internal/user/repository"
+	userUC "github.com/fekuna/omnipos-user-service/internal/user/usecase"
 	"github.com/joho/godotenv"
 	"go.uber.org/zap"
 	"google.golang.org/grpc"
@@ -62,6 +69,8 @@ func main() {
 	// Initialize repositories
 	merchantRepository := merchantRepo.NewPGRepository(db)
 	refreshTokenRepository := refreshTokenRepo.NewPGRepository(db)
+	roleRepository := roleRepo.NewPostgresRepository(db)
+	userRepository := userRepo.NewPostgresUserRepository(db)
 
 	log.Info("Repositories initialized")
 
@@ -74,11 +83,31 @@ func main() {
 		cfg.JWT.AccessTokenExpiry,
 		cfg.JWT.RefreshTokenExpiry,
 	)
+	roleUsecase := roleUC.NewRoleUsecase(roleRepository)
+	userUsecase := userUC.NewUserUsecase(
+		userRepository,
+		merchantUsecase,
+		cfg.JWT.SecretKey,
+		cfg.JWT.AccessTokenExpiry,
+		cfg.JWT.RefreshTokenExpiry,
+	)
 
 	log.Info("Use cases initialized")
 
+	// Initialize audit publisher (optional - only if Kafka is configured)
+	var auditPublisher *audit.AuditPublisher
+	if len(cfg.Kafka.Brokers) > 0 && cfg.Kafka.Brokers[0] != "" {
+		auditPublisher = audit.NewAuditPublisher(cfg.Kafka.Brokers, "user-service")
+		defer auditPublisher.Close()
+		log.Info("Audit publisher initialized", zap.Strings("brokers", cfg.Kafka.Brokers))
+	} else {
+		log.Warn("Kafka not configured, audit publishing disabled")
+	}
+
 	// Initialize handlers
-	merchantHandler := handler.NewMerchantHandler(merchantUsecase, log)
+	merchantHandler := handler.NewMerchantHandler(merchantUsecase, userUsecase, log)
+	roleHandler := roleHandler.NewRoleHandler(roleUsecase, log)
+	userHandler := userHandler.NewUserHandler(userUsecase, log, auditPublisher)
 
 	log.Info("Handlers initialized")
 
@@ -91,6 +120,8 @@ func main() {
 		grpc.UnaryInterceptor(authContextInterceptor.Unary()),
 	)
 	userv1.RegisterMerchantServiceServer(grpcServer, merchantHandler)
+	userv1.RegisterRoleServiceServer(grpcServer, roleHandler)
+	userv1.RegisterUserServiceServer(grpcServer, userHandler)
 	reflection.Register(grpcServer)
 
 	log.Info("gRPC server configured with auth context interceptor")
