@@ -6,7 +6,7 @@ import (
 
 	"github.com/fekuna/omnipos-pkg/audit"
 	"github.com/fekuna/omnipos-pkg/logger"
-	userv1 "github.com/fekuna/omnipos-proto/proto/user/v1"
+	userv1 "github.com/fekuna/omnipos-proto/gen/go/omnipos/user/v1"
 	"github.com/fekuna/omnipos-user-service/internal/auth"
 	"github.com/fekuna/omnipos-user-service/internal/user/usecase"
 	"go.uber.org/zap"

@@ -9,7 +9,7 @@ import (
 	"github.com/fekuna/omnipos-pkg/audit"
 	"github.com/fekuna/omnipos-pkg/database/postgres"
 	"github.com/fekuna/omnipos-pkg/logger"
-	userv1 "github.com/fekuna/omnipos-proto/proto/user/v1"
+	userv1 "github.com/fekuna/omnipos-proto/gen/go/omnipos/user/v1"
 	"github.com/fekuna/omnipos-user-service/config"
 	"github.com/fekuna/omnipos-user-service/internal/merchant/handler"
 	merchantRepo "github.com/fekuna/omnipos-user-service/internal/merchant/repository"

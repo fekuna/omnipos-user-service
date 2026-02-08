@@ -5,7 +5,7 @@ import (
 	"database/sql"
 	"time"
 
-	userv1 "github.com/fekuna/omnipos-proto/proto/user/v1"
+	userv1 "github.com/fekuna/omnipos-proto/gen/go/omnipos/user/v1"
 	"github.com/jmoiron/sqlx"
 	"google.golang.org/protobuf/types/known/timestamppb"
 )

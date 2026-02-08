@@ -5,7 +5,7 @@ import (
 	"errors"
 	"time"
 
-	userv1 "github.com/fekuna/omnipos-proto/proto/user/v1"
+	userv1 "github.com/fekuna/omnipos-proto/gen/go/omnipos/user/v1"
 	"github.com/fekuna/omnipos-user-service/internal/helper"
 	"github.com/fekuna/omnipos-user-service/internal/merchant"
 	"github.com/fekuna/omnipos-user-service/internal/user/repository"

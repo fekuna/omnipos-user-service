@@ -11,7 +11,6 @@ replace github.com/fekuna/omnipos-proto => ../omnipos-proto
 require (
 	github.com/fekuna/omnipos-pkg v0.0.0-00010101000000-000000000000
 	github.com/fekuna/omnipos-proto v0.0.0
-	github.com/fekuna/omnipos-gateway v0.0.0
 	github.com/golang-jwt/jwt/v5 v5.3.1
 	github.com/google/uuid v1.6.0
 	github.com/jmoiron/sqlx v1.4.0
